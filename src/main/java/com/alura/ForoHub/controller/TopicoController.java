@@ -1,4 +1,4 @@
-package com.alura.ForoHub.controller;//package com.alura.ForoHub.controller;
+//package com.alura.ForoHub.controller;
 //
 //import com.alura.ForoHub.model.Topico;
 //import com.alura.ForoHub.repository.TopicoRepository;
@@ -96,6 +96,8 @@ package com.alura.ForoHub.controller;//package com.alura.ForoHub.controller;
 //    }
 //}
 
+package com.alura.ForoHub.controller;
+
 import com.alura.ForoHub.model.DatosRegistroTopico;
 import com.alura.ForoHub.model.Topico;
 import com.alura.ForoHub.model.Usuario;
@@ -121,14 +123,20 @@ public class TopicoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> registrarTopico(@RequestBody DatosRegistroTopico topicoDTO, Authentication authentication) {
+    public ResponseEntity<?> registrarTopico(@RequestBody DatosRegistroTopico topicoDTO,
+                                             Authentication authentication) {
         // Verificar si hay un usuario autenticado
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no autenticado");
         }
 
-        // Extraer el usuario autenticado
-        var usuario = (Usuario) authentication.getPrincipal();
+        // Obtener el principal (objeto que representa al usuario autenticado)
+        var principal = authentication.getPrincipal();
+        // Imprime la clase real del principal en consola
+        System.out.println("Principal class: " + principal.getClass().getName());
+
+        // Castear a tu clase Usuario (asegúrate de que realmentesea com.alura.ForoHub.model.Usuario)
+        var usuario = (Usuario) principal;
 
         // Crear un nuevo tópico
         var topico = new Topico();
@@ -136,7 +144,8 @@ public class TopicoController {
         topico.setMensaje(topicoDTO.getMensaje());
         topico.setFechaCreacion(LocalDateTime.now());
         topico.setStatus(topicoDTO.getStatus());
-        topico.setAutor(usuario.getLogin()); // Usar el login del usuario autenticado
+        // Usar el login del usuario autenticado (Usuario.getLogin())
+        topico.setAutor(usuario.getLogin());
         topico.setCurso(topicoDTO.getCurso());
 
         // Guardar el tópico en la base de datos
@@ -145,5 +154,6 @@ public class TopicoController {
         return ResponseEntity.ok("Tópico registrado con éxito");
     }
 }
+
 
 

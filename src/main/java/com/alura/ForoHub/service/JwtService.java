@@ -1,74 +1,11 @@
-package com.alura.ForoHub.service;//package com.alura.ForoHub.service;
-//
-//import io.jsonwebtoken.Claims;
-//import io.jsonwebtoken.Jwts;
-//import io.jsonwebtoken.SignatureAlgorithm;
-//import org.springframework.security.core.userdetails.UserDetails;
-//import org.springframework.stereotype.Service;
-//
-//import java.util.Date;
-//import java.util.function.Function;
-//
-//@Service
-//public class JwtService {
-//
-//    // Clave secreta de al menos 256 bits (32 caracteres)
-//    private final String SECRET_KEY = "ThisIsAStrongSecretKeyWithEnoughLength123!";
-//
-//    // Generar un token JWT
-//    public String generateToken(String username) {
-//        return Jwts.builder()
-//                .setSubject(username)
-//                .setIssuedAt(new Date())
-//                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 horas
-//                .signWith(SignatureAlgorithm.HS256, SECRET_KEY) // Usar HS256 con una clave válida
-//                .compact();
-//    }
-//
-//    // Extraer el nombre de usuario del token
-//    public String extractUsername(String token) {
-//        return extractClaim(token, Claims::getSubject);
-//    }
-//
-//    // Método genérico para extraer cualquier campo del token
-//    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-//        final Claims claims = extractAllClaims(token);
-//        return claimsResolver.apply(claims);
-//    }
-//
-//    // Extraer todos los claims (campos) del token
-//    private Claims extractAllClaims(String token) {
-//        return Jwts.parser()
-//                .setSigningKey(SECRET_KEY)
-//                .parseClaimsJws(token)
-//                .getBody();
-//    }
-//
-//    // Verificar si el token ha expirado
-//    private boolean isTokenExpired(String token) {
-//        return extractExpiration(token).before(new Date());
-//    }
-//
-//    // Extraer la fecha de expiración del token
-//    private Date extractExpiration(String token) {
-//        return extractClaim(token, Claims::getExpiration);
-//    }
-//
-//    // Validar si el token es válido usando UserDetails
-//    public boolean isTokenValid(String token, UserDetails userDetails) {
-//        final String username = extractUsername(token);
-//        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
-//    }
-//
-//    // Validar si el token es válido usando un username (String)
-//    public boolean isTokenValid(String token, String username) {
-//        final String extractedUsername = extractUsername(token);
-//        return extractedUsername.equals(username) && !isTokenExpired(token);
-//    }
-//}
+package com.alura.ForoHub.service;
+
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -79,37 +16,58 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    // Clave secreta proporcionada
-    private final String SECRET = "hFqg8bAEJJM7mVZuPqgBfjHLVSGblYUCCZfamLuwSD8=";
-    private final Key SECRET_KEY = new SecretKeySpec(Base64.getDecoder().decode(SECRET), SignatureAlgorithm.HS256.getJcaName());
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
-    // Método para generar un token JWT
+    /**
+     * Clave secreta (ya decodificada).
+     * Se construye en el constructor usando la propiedad inyectada.
+     */
+    private final Key secretKey;
+
+    /**
+     * Inyecta la propiedad desde application.properties:
+     *   api.security.secret=hFqg8bAEJJM7mVZuPqgBfjHLVSGblYUCCZfamLuwSD8=
+     * Luego decodifica la base64 y construye la Key.
+     */
+    public JwtService(@Value("${api.security.secret}") String secretBase64) {
+        // Decodifica la cadena Base64 y crea la Key para HS256
+        this.secretKey = new SecretKeySpec(
+                Base64.getDecoder().decode(secretBase64),
+                SignatureAlgorithm.HS256.getJcaName()
+        );
+        logger.info("JWTService iniciado. Se ha leído la clave desde properties.");
+    }
+
+    /**
+     * Genera el token JWT con la clave generada arriba.
+     */
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
-                .setIssuedAt(new Date()) // Fecha de emisión
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // Expira en 10 horas
-                .signWith(SECRET_KEY) // Usar la clave secreta
+                .setIssuedAt(new Date())
+                // Ejemplo: expira en 1 hora
+                .setExpiration(new Date(System.currentTimeMillis() + 3600_000))
+                .signWith(secretKey)
                 .compact();
     }
 
-    // Método para obtener el subject (nombre de usuario) del token
+    /**
+     * Obtiene el 'subject' del token (generalmente, el username).
+     */
     public String getSubject(String token) {
         try {
             return Jwts.parserBuilder()
-                    .setSigningKey(SECRET_KEY) // Usa la misma clave para verificar
+                    .setSigningKey(secretKey) // MISMA key de arriba
                     .build()
                     .parseClaimsJws(token)
                     .getBody()
                     .getSubject();
         } catch (JwtException e) {
-            System.err.println("Error al validar el token: " + e.getMessage());
-            throw e; // Relanza la excepción para que el filtro la maneje
+            logger.error("Error al validar el token: {}", e.getMessage());
+            throw e; // Se relanza para que tu filtro o controlador la maneje
         }
     }
-
 }
-
 
 
 

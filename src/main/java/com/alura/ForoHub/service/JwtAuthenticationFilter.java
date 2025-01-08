@@ -8,10 +8,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import java.util.List;
 
 import java.io.IOException;
-
+import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -29,6 +28,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7); // Extrae el token después de "Bearer "
+            System.out.println("Token recibido: " + token); // Imprime el token recibido para depuración
+
             try {
                 String username = jwtService.getSubject(token); // Llama al método de JwtService
                 if (username != null) {
@@ -36,14 +37,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
-                System.err.println("Error procesando el token: " + e.getMessage());
+                // Maneja cualquier excepción durante la validación del token
+                System.err.println("Error al validar el token: " + e.getMessage());
             }
         }
+
         filterChain.doFilter(request, response);
     }
-
-
 }
+
 
 
 
